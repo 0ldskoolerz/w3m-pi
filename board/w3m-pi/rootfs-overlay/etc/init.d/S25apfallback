@@ -1,0 +1,64 @@
+#!/bin/sh
+# S25apfallback — MODO AP DE RESCATE: si la wifi no conecto, la Pi se
+# convierte en punto de acceso "w3m-pi" para que puedas SSH y configurar.
+# AP: w3m-pi / IP de la Pi: 192.168.4.1 / root / w3mpi
+
+AP_SSID="w3m-pi"
+AP_IP="192.168.4.1"
+
+HOSTAPD_CONF=/tmp/hostapd-ap.conf
+
+case "$1" in
+    start)
+        # ¿fallo la red? (S20net marco el fallo)
+        if [ ! -f /tmp/net-failed ] && ip -4 addr show wlan0 2>/dev/null | grep -q 'inet '; then
+            exit 0    # red OK, no hace falta el AP
+        fi
+        echo "S25ap: activando modo AP de rescate ('$AP_SSID')..."
+
+        # configuracion hostapd para el BCM43438
+        cat > "$HOSTAPD_CONF" <<EOF
+interface=wlan0
+driver=nl80211
+ssid=$AP_SSID
+hw_mode=g
+channel=7
+wmm_enabled=0
+macaddr_acl=0
+auth_algs=1
+ignore_broadcast_ssid=0
+wpa=2
+wpa_passphrase=w3mpi-ap
+rsn_pairwise=CCMP
+EOF
+
+        # IP estatica para el AP
+        ip addr flush dev wlan0 2>/dev/null
+        ip link set wlan0 up
+        ip addr add "$AP_IP/24" dev wlan0
+
+        # hostapd en segundo plano
+        hostapd -B "$HOSTAPD_CONF" >/dev/null 2>&1 || {
+            echo "S25ap: hostapd fallo (¿driver?)"; exit 1
+        }
+
+        # DNS + DHCP para los clientes que se conecten
+        cat > /tmp/dnsmasq-ap.conf <<EOF
+interface=wlan0
+dhcp-range=192.168.4.10,192.168.4.50,255.255.255.0,12h
+dhcp-option=3,$AP_IP
+dhcp-option=6,$AP_IP
+EOF
+        dnsmasq --conf-file=/tmp/dnsmasq-ap.conf >/dev/null 2>&1
+
+        echo "S25ap: AP activo — conectate a la red '$AP_SSID'"
+        echo "S25ap:   clave: w3mpi-ap"
+        echo "S25ap:   luego: ssh root@$AP_IP (contrasena: w3mpi)"
+        ;;
+    stop)
+        killall hostapd dnsmasq 2>/dev/null
+        ;;
+    *)
+        echo "Uso: $0 {start|stop}"; exit 1
+        ;;
+esac

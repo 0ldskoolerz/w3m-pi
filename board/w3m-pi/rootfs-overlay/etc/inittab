@@ -1,0 +1,14 @@
+# w3m-pi inittab (BusyBox init)
+::sysinit:/bin/mount -t proc proc /proc
+::sysinit:/bin/mount -o remount,rw /
+::sysinit:/bin/mkdir -p /dev/pts /proc /sys /tmp /run
+::sysinit:/bin/mount -a
+::sysinit:/bin/hostname w3m-pi
+::sysinit:/etc/init.d/rcS
+# consola serie UART (acceso remoto por GPIO sin red)
+ttyAMA0::respawn:/sbin/getty -L ttyAMA0 115200 vt100
+# consola local si conectas un USB-TTL/hdmi debug
+tty1::respawn:/sbin/getty -L tty1 0 vt100
+::ctrlaltdel:/sbin/reboot
+::shutdown:/etc/init.d/rcK
+::shutdown:/bin/umount -a -r

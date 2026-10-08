@@ -1,0 +1,18 @@
+# config.txt — boot de Raspberry Pi Zero W (w3m-pi, headless)
+
+# UART habilitado (consola serie por GPIO para acceso remoto sin red)
+enable_uart=1
+
+# sin HDMI (headless)
+hdmi_blanking=2
+dtoverlay=disable-bt
+
+# CPU estable (el Zero W es armv6; un pelin de margen termico)
+arm_freq=1000
+over_voltage=6
+
+# rootfs en la segunda particion
+dtparam=audio=off
+# gpu_mem minimo (headless: 16 MB basta)
+gpu_mem=16
+

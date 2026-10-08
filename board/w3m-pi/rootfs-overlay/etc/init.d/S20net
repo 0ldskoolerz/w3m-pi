@@ -1,0 +1,61 @@
+#!/bin/sh
+# S20net — red automatica al arranque: wlan0 (wifi) y eth0 (si hay adaptador USB).
+# DHCP con 3 reintentos. Si todo falla, S25apfallback monta el AP de rescate.
+
+CONF=/etc/wpa_supplicant.conf
+
+start_iface() {
+    IFACE="$1"
+    ip link show "$IFACE" >/dev/null 2>&1 || return 1
+    ip link set "$IFACE" up
+
+    if [ "$IFACE" = "wlan0" ]; then
+        # ¿hay redes configuradas (bloques network con ssid)?
+        if ! grep -q 'ssid=' "$CONF" 2>/dev/null; then
+            echo "S20net: sin wifi configurada en $CONF"
+            return 1
+        fi
+        echo "S20net: asociando wlan0..."
+        wpa_supplicant -B -i wlan0 -c "$CONF" >/dev/null 2>&1
+        # espera asociacion (max 15s)
+        n=0
+        while [ $n -lt 15 ]; do
+            iwgetid wlan0 >/dev/null 2>&1 && break
+            sleep 1
+            n=$((n+1))
+        done
+        iwgetid wlan0 >/dev/null 2>&1 || {
+            echo "S20net: no se asocio a ninguna wifi"
+            return 1
+        }
+    fi
+
+    echo "S20net: DHCP en $IFACE..."
+    n=0
+    while [ $n -lt 3 ]; do
+        udhcpc -i "$IFACE" -n -q -t 10 -T 10 >/dev/null 2>&1 && {
+            echo "S20net: $IFACE OK ($(ip -4 addr show $IFACE | grep -o 'inet [0-9.]*'))"
+            return 0
+        }
+        n=$((n+1))
+        echo "S20net: reintento DHCP ($n/3) en $IFACE"
+        sleep 2
+    done
+    return 1
+}
+
+case "$1" in
+    start)
+        start_iface eth0
+        start_iface wlan0 || touch /tmp/net-failed
+        ;;
+    stop)
+        killall udhcpc wpa_supplicant 2>/dev/null
+        ;;
+    restart)
+        "$0" stop; "$0" start
+        ;;
+    *)
+        echo "Uso: $0 {start|stop|restart}"; exit 1
+        ;;
+esac

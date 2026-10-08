@@ -1,0 +1,27 @@
+#!/bin/sh
+# S60announce — anuncia la IP de la Pi por multicast en la LAN local
+# para que puedas encontrarla sin escanear: `ping 239.255.0.1` y los
+# hosts w3m responden; o simplemente mira el log del boot.
+
+case "$1" in
+    start)
+        IP=$(ip -4 addr show wlan0 2>/dev/null | grep -o 'inet [0-9.]*' | awk '{print $2}')
+        [ -z "$IP" ] && IP=$(ip -4 addr show eth0 2>/dev/null | grep -o 'inet [0-9.]*' | awk '{print $2}')
+        if [ -n "$IP" ]; then
+            echo "w3m-pi lista: ssh root@$IP (w3mpi)" > /dev/console
+            # beacon simple cada 60s: un ping al grupo multicast
+            while :; do
+                ping -c 1 -W 1 239.255.0.1 >/dev/null 2>&1
+                sleep 60
+            done &
+        else
+            echo "w3m-pi: modo AP de rescate (ver S25ap)" > /dev/console
+        fi
+        ;;
+    stop)
+        kill %1 2>/dev/null
+        ;;
+    *)
+        echo "Uso: $0 {start|stop}"; exit 1
+        ;;
+esac

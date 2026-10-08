@@ -1,0 +1,22 @@
+
+  _      ___  __  __ __  __
+ | |    / _ \|  \/  |  \/  |   herramientas de red headless
+ | |   | | | | |\/| | |\/| |   para Raspberry Pi Zero W
+ | |___| |_| | |  | | |  | |
+ |______\___/|_|  |_|_|  |_|
+
+
+  Documentacion rapida:
+    ping, traceroute, nmap, tcpdump, dig, iw, wpa_cli, arp, netstat
+    ifconfig, route, nc, top, free, df
+
+  Configurar wifi real:
+    wpa_passphrase "TuRed" "TuClave" >> /etc/wpa_supplicant.conf
+    /etc/init.d/S20net restart
+
+  Modo AP de rescate: red "w3m-pi", clave "w3mpi-ap", luego
+  ssh root@192.168.4.1  (contrasena: w3mpi)
+
+  Consola serie: GPIO14(TXD)/15(RXD) a 115200 8N1
+
+  Cambia la contrasena con: passwd

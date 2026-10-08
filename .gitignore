@@ -1,0 +1,8 @@
+# buildroot output
+output/
+buildroot/
+
+# editor / OS
+*.swp
+*~
+.DS_Store
